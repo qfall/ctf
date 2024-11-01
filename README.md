@@ -1,90 +1,100 @@
-# ![](https://github.com/CTFd/CTFd/blob/master/CTFd/themes/core/static/img/logo.png?raw=true)
+# qFALL-ctf
 
-![CTFd MySQL CI](https://github.com/CTFd/CTFd/workflows/CTFd%20MySQL%20CI/badge.svg?branch=master)
-![Linting](https://github.com/CTFd/CTFd/workflows/Linting/badge.svg?branch=master)
-[![MajorLeagueCyber Discourse](https://img.shields.io/discourse/status?server=https%3A%2F%2Fcommunity.majorleaguecyber.org%2F)](https://community.majorleaguecyber.org/)
-[![Documentation Status](https://api.netlify.com/api/v1/badges/6d10883a-77bb-45c1-a003-22ce1284190e/deploy-status)](https://docs.ctfd.io)
+This part of the [qFALL project](https://qfall.github.io/) is based on the CTF platform [CTFd](https://github.com/CTFd/CTFd).
+We integrate a [plugin](https://github.com/MelonShooter/ctfd-individual-flags-plugin) to individualize the challenges, provide cryptographic challenges and an easy setup of TLS.
 
-## What is CTFd?
+This repository is currently being developed by the project group [qFALL - quantum resistant fast lattice library](https://cs.uni-paderborn.de/cuk/lehre/veranstaltungen/ws-2022-23/project-group-qfall) in the winter term 2022 and summer term 2023 by the Codes and Cryptography research group in Paderborn.
 
-CTFd is a Capture The Flag framework focusing on ease of use and customizability. It comes with everything you need to run a CTF and it's easy to customize with plugins and themes.
+This project is dedicated to the educational part of qFALL.
+We provide this CTF platform and its challenges to enable lecturers among the world to provide even more engaging lectures on cryptography (specifically focussing on lattice-based cryptography).
 
-![CTFd is a CTF in a can.](https://github.com/CTFd/CTFd/blob/master/CTFd/themes/core/static/img/scoreboard.png?raw=true)
+Please refer to [our website](https://qfall.github.io/) as a central information point.
+To use our library for your project, please refer to [our tutorial](https://qfall.github.io/book/index.html).
+It provides a step-by-step guide to install the required libraries and gives further insights into the usage of our crates.
 
-## Features
+## Disclaimer
 
-- Create your own challenges, categories, hints, and flags from the Admin Interface
-  - Dynamic Scoring Challenges
-  - Unlockable challenge support
-  - Challenge plugin architecture to create your own custom challenges
-  - Static & Regex based flags
-    - Custom flag plugins
-  - Unlockable hints
-  - File uploads to the server or an Amazon S3-compatible backend
-  - Limit challenge attempts & hide challenges
-  - Automatic bruteforce protection
-- Individual and Team based competitions
-  - Have users play on their own or form teams to play together
-- Scoreboard with automatic tie resolution
-  - Hide Scores from the public
-  - Freeze Scores at a specific time
-- Scoregraphs comparing the top 10 teams and team progress graphs
-- Markdown content management system
-- SMTP + Mailgun email support
-  - Email confirmation support
-  - Forgot password support
-- Automatic competition starting and ending
-- Team management, hiding, and banning
-- Customize everything using the [plugin](https://docs.ctfd.io/docs/plugins/overview) and [theme](https://docs.ctfd.io/docs/themes/overview) interfaces
-- Importing and Exporting of CTF data for archival
-- And a lot more...
+Currently, we are in the development phase and interfaces might change.
+Feel free to check out the current progress, but be aware, that the content will
+change in the upcoming weeks and months. An official release will most likely be published in the second half of 2024.
 
-## Install
+## What does qFALL-ctf offer?
+This repository contains a configuration of the open-source platform [CTFd](https://github.com/CTFd/) that any lecturer can setup within 10 minutes to provide engaging CTF challenges for their students.
+Below, you can find step-by-step instructions to deploy our instance using [Docker](https://docker.com) based on any Debian-based Linux distribution.
+If you want to test the deployment on your localhost first, please ignore and remove any certificate-related commands and lines in the configuration files.
 
-1. Install dependencies: `pip install -r requirements.txt`
-   1. You can also use the `prepare.sh` script to install system dependencies using apt.
-2. Modify [CTFd/config.ini](https://github.com/CTFd/CTFd/blob/master/CTFd/config.ini) to your liking.
-3. Use `python serve.py` or `flask run` in a terminal to drop into debug mode.
+### Setup
 
-You can use the auto-generated Docker images with the following command:
+Requirements
+- A server with ...
+    - at least two threads (four are recommended)
+    - at least 1 GB of RAM (2 GB are recommended)
+    - a static public IP address
+    - an operating system based on Debian
+- A registered domain that points to this IP address
+- Opened HTTP (80), HTTPS (443), SSH (22) ports
+    - Preferably close all other ports - if there is no firewall in place, you can use [ufw](https://wiki.ubuntu.com/UncomplicatedFirewall) to setup one
+- An SSH connection to your server
 
-`docker run -p 8000:8000 -it ctfd/ctfd`
-
-Or you can use Docker Compose with the following command from the source repository:
-
-`docker compose up`
-
-Check out the [CTFd docs](https://docs.ctfd.io/) for [deployment options](https://docs.ctfd.io/docs/deployment/installation) and the [Getting Started](https://docs.ctfd.io/tutorials/getting-started/) guide
-
-## Live Demo
-
-https://demo.ctfd.io/
-
-## Support
-
-To get basic support, you can join the [MajorLeagueCyber Community](https://community.majorleaguecyber.org/): [![MajorLeagueCyber Discourse](https://img.shields.io/discourse/status?server=https%3A%2F%2Fcommunity.majorleaguecyber.org%2F)](https://community.majorleaguecyber.org/)
-
-If you prefer commercial support or have a special project, feel free to [contact us](https://ctfd.io/contact/).
-
-## Managed Hosting
-
-Looking to use CTFd but don't want to deal with managing infrastructure? Check out [the CTFd website](https://ctfd.io/) for managed CTFd deployments.
-
-## MajorLeagueCyber
-
-CTFd is heavily integrated with [MajorLeagueCyber](https://majorleaguecyber.org/). MajorLeagueCyber (MLC) is a CTF stats tracker that provides event scheduling, team tracking, and single sign on for events.
-
-By registering your CTF event with MajorLeagueCyber users can automatically login, track their individual and team scores, submit writeups, and get notifications of important events.
-
-To integrate with MajorLeagueCyber, simply register an account, create an event, and install the client ID and client secret in the relevant portion in `CTFd/config.py` or in the admin panel:
-
-```python
-OAUTH_CLIENT_ID = None
-OAUTH_CLIENT_SECRET = None
+#### Setup CTF Instance
+Once you are connected to your server via SSH, we make sure that all required packages are installed including [snap](https://snapcraft.io/), [git](https://git-scm.com/), and [Docker](https://docker.com).
+```bash
+sudo apt-get update
+sudo apt-get install snapd git
+sudo snap install snapd docker
 ```
 
-## Credits
+Then, clone this git repository and enter the directory using the following command.
+```bash
+git clone https://github.com/qfall/ctf.git && cd ./ctf/
+```
 
-- Logo by [Laura Barbera](http://www.laurabb.com/)
-- Theme by [Christopher Thompson](https://github.com/breadchris)
-- Notification Sound by [Terrence Martin](https://soundcloud.com/tj-martin-composer)
+#### Customize Configuration
+Now, we need to make some changes to the following files: `docker-compose.yml` and `conf/nginx/http.conf` using your favorite editor.
+- In the `docker-compose.yml` file, please change the `SECRET_KEY` value and adjust the number of `WORKERS` appropriately to your system setup.
+- In the `conf/nginx/http.conf` file, adjust the number of `worker_processes` according to your setup and replace `<your_domain.org>` by your domain *everywhere*. Please make sure that you made all 5 substitutions of the domain!
+
+Now, it's time to start the system.
+```bash
+docker compose up -d
+```
+Note that for some systems, `docker-compose` might need to be connected via a dash.
+The `-d` tells the docker container to run detached from the console.
+You can always join the feed using `docker compose attach`.
+You can also `stop`, `restart`, `pause`, `unpause`, ... via `docker compose`.
+If you ever want to remove it, call `docker compose down`.
+
+#### Obtain your Certificate
+Currently, your system is up and running, but there is no certificate available to establish secure connections.
+To get a certificate using [Let'sEncrypt](https://letsencrypt.org/) and [Certbot](https://certbot.eff.org/), execute the following command (replacing `your_domain.org` by your domain).
+```bash
+docker compose run --rm  certbot certonly --webroot --webroot-path /var/www/certbot/ -d your_domain.org
+```
+Attach `--dry-run` to test this command in order to avoid hitting the maximum number of signing requests if something went wrong.
+Enter your email and any other requested information to get a signed certificate.
+After successfully obtaining a signed certificate, restart the [Nginx](https://nginx.org) server by executing the following line.
+```bash
+docker compose restart nginx
+```
+Connect to your server for the first time. You should be able to setup your new CTFd instance.
+
+#### Setup Auto-Renewal of Certificate
+Your certificate is valid for three months.
+Renewing the certificate will be done by the following command if it is near to expiration.
+```bash
+docker compose run --rm certbot renew
+```
+Furthermore, you need to restart the Nginx server afterwards to load the new certificates.
+
+As you probably don't want to run these commands every third month, we setup a 'cron job', which executes these commands daily.
+As the certificate will only be renewed close to its expiration date, the commands will only restart Nginx if this happens.
+
+Setup a `cron job` by executing the following line.
+```bash
+sudo crontab -e
+```
+Place the following at the end of the file and replace `directory_of_your_ctf_instance` by the path to your `ctf` directory.
+```bash
+30 3 * * * cd /path_to_ctf_directory/ && docker compose run --rm certbot renew --post-hook "docker compose restart nginx"
+```
+Now, the server will try to renew the certificate every day at 3:30 am and restart the `nginx` server if a new certificate was issued.
