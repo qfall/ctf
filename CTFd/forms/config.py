@@ -12,6 +12,7 @@ from CTFd.constants.languages import SELECT_LANGUAGE_LIST
 from CTFd.forms import BaseForm
 from CTFd.forms.fields import SubmitField
 from CTFd.utils.csv import get_dumpable_tables
+from CTFd.utils.social import BASE_TEMPLATE
 
 
 class ResetInstanceForm(BaseForm):
@@ -64,6 +65,11 @@ class AccountSettingsForm(BaseForm):
         widget=NumberInput(min=0),
         description="Maximum number of user accounts allowed to register with this CTF",
     )
+    password_min_length = IntegerField(
+        "Minimum Password Length for Users",
+        widget=NumberInput(min=0),
+        description="Minimum Password Length for Users",
+    )
     verify_emails = SelectField(
         "Verify Emails",
         description="Control whether users must confirm their email addresses before playing",
@@ -115,6 +121,11 @@ class SocialSettingsForm(BaseForm):
         choices=[("true", "Enabled"), ("false", "Disabled")],
         default="true",
     )
+    social_share_solve_template = TextAreaField(
+        "Social Share Solve Template",
+        description="HTML for Share Template",
+        default=BASE_TEMPLATE,
+    )
     submit = SubmitField("Update")
 
 
@@ -139,6 +150,12 @@ class LegalSettingsForm(BaseForm):
 
 
 class ChallengeSettingsForm(BaseForm):
+    view_self_submissions = SelectField(
+        "View Self Submissions",
+        description="Allow users to view their previous submissions",
+        choices=[("true", "Enabled"), ("false", "Disabled")],
+        default="false",
+    )
     max_attempts_behavior = SelectField(
         "Max Attempts Behavior",
         description="Set Max Attempts behavior to be a lockout or a timeout",

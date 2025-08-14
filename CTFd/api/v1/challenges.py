@@ -347,8 +347,10 @@ class Challenge(Resource):
                                 "type": "hidden",
                                 "name": "???",
                                 "value": 0,
+                                "logic": None,
                                 "solves": None,
                                 "solved_by_me": False,
+                                "solution_id": None,
                                 "category": "???",
                                 "tags": [],
                                 "template": "",
@@ -454,6 +456,11 @@ class Challenge(Resource):
         response["tags"] = tags
         response["hints"] = hints
 
+        solution_id = None
+        if chal.solution_id and chal.solution.state == "visible":
+            solution_id = chal.solution.id
+        response["solution_id"] = solution_id
+
         response["view"] = render_template(
             chal_class.templates["view"].lstrip("/"),
             solves=solve_count,
@@ -541,12 +548,19 @@ class ChallengeAttempt(Resource):
             if preview:
                 challenge = Challenges.query.filter_by(id=challenge_id).first_or_404()
                 chal_class = get_chal_class(challenge.type)
-                status, message = chal_class.attempt(challenge, request)
+                response = chal_class.attempt(challenge, request)
+                # TODO: CTFd 4.0 We should remove the tuple strategy for Challenge plugins in favor of ChallengeResponse
+                if isinstance(response, tuple):
+                    status = "correct" if response[0] else "incorrect"
+                    message = response[1]
+                else:
+                    status = response.status
+                    message = response.message
 
                 return {
                     "success": True,
                     "data": {
-                        "status": "correct" if status else "incorrect",
+                        "status": status,
                         "message": message,
                     },
                 }
@@ -648,7 +662,21 @@ class ChallengeAttempt(Resource):
                         seconds=max_attempts_timeout
                     )
                     fails = fails_query.filter(Fails.date >= timeout_delta).count()
+                    # Calculate actual time remaining for the most recent fail
                     response = f"Not accepted. Try again in {math.ceil(max_attempts_timeout / 60)} minutes"
+                    if fails > 0:
+                        most_recent_fail = (
+                            fails_query.filter(Fails.date >= timeout_delta)
+                            .order_by(Fails.date.asc())
+                            .first()
+                        )
+                        if most_recent_fail:
+                            time_since_fail = (
+                                datetime.utcnow() - most_recent_fail.date
+                            ).total_seconds()
+                            remaining_seconds = max_attempts_timeout - time_since_fail
+                            remaining_minutes = math.ceil(remaining_seconds / 60)
+                            response = f"Not accepted. Try again in {remaining_minutes} minutes"
                 else:  # Use lockout behavior
                     fails = fails_query.count()
                     response = "Not accepted. You have 0 tries remaining"
@@ -665,8 +693,17 @@ class ChallengeAttempt(Resource):
                         403,
                     )
 
-            status, message = chal_class.attempt(challenge, request)
-            if status:  # The challenge plugin says the input is right
+            response = chal_class.attempt(challenge, request)
+            # TODO: CTFd 4.0 We should remove the tuple strategy for Challenge plugins in favor of ChallengeResponse
+            if isinstance(response, tuple):
+                status = response[0]
+                message = response[1]
+            else:
+                status = response.status
+                message = response.message
+
+            if status == "correct" or status is True:
+                # The challenge plugin says the input is right
                 if ctftime() or current_user.is_admin():
                     chal_class.solve(
                         user=user, team=team, challenge=challenge, request=request
@@ -686,7 +723,29 @@ class ChallengeAttempt(Resource):
                     "success": True,
                     "data": {"status": "correct", "message": message},
                 }
-            else:  # The challenge plugin says the input is wrong
+            elif status == "partial":
+                # The challenge plugin says that the input is a partial solve
+                if ctftime() or current_user.is_admin():
+                    chal_class.partial(
+                        user=user, team=team, challenge=challenge, request=request
+                    )
+                    clear_standings()
+                    clear_challenges()
+
+                log(
+                    "submissions",
+                    "[{date}] {name} submitted {submission} on {challenge_id} with kpm {kpm} [PARTIAL]",
+                    name=user.name,
+                    submission=request_data.get("submission", "").encode("utf-8"),
+                    challenge_id=challenge_id,
+                    kpm=kpm,
+                )
+                return {
+                    "success": True,
+                    "data": {"status": "partial", "message": message},
+                }
+            elif status == "incorrect" or status is False:
+                # The challenge plugin says the input is wrong
                 if ctftime() or current_user.is_admin():
                     chal_class.fail(
                         user=user, team=team, challenge=challenge, request=request
@@ -721,7 +780,30 @@ class ChallengeAttempt(Resource):
                             max_attempts_timeout = int(
                                 get_config("max_attempts_timeout", 300)
                             )
-                            message += f" Try again in {math.ceil(max_attempts_timeout / 60)} minutes."
+                            # Calculate actual time remaining based on the most recent fail
+                            timeout_delta = datetime.utcnow() - timedelta(
+                                seconds=max_attempts_timeout
+                            )
+                            most_recent_fail = (
+                                Fails.query.filter_by(
+                                    account_id=user.account_id,
+                                    challenge_id=challenge_id,
+                                )
+                                .filter(Fails.date >= timeout_delta)
+                                .order_by(Fails.date.asc())
+                                .first()
+                            )
+                            if most_recent_fail:
+                                time_since_fail = (
+                                    datetime.utcnow() - most_recent_fail.date
+                                ).total_seconds()
+                                remaining_seconds = (
+                                    max_attempts_timeout - time_since_fail
+                                )
+                                remaining_minutes = math.ceil(remaining_seconds / 60)
+                                message += f" Try again in {remaining_minutes} minutes"
+                            else:
+                                message += f" Try again in {math.ceil(max_attempts_timeout / 60)} minutes"
                     return {
                         "success": True,
                         "data": {
@@ -745,11 +827,19 @@ class ChallengeAttempt(Resource):
                 challenge_id=challenge_id,
                 kpm=kpm,
             )
+            response = chal_class.attempt(challenge, request)
+            # TODO: CTFd 4.0 We should remove the tuple strategy for Challenge plugins in favor of ChallengeResponse
+            if isinstance(response, tuple):
+                status = response[0]
+                message = response[1]
+            else:
+                status = response.status
+                message = response.message
             return {
                 "success": True,
                 "data": {
                     "status": "already_solved",
-                    "message": "You already solved this",
+                    "message": f"{message} but you already solved this",
                 },
             }
 
