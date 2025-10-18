@@ -121,6 +121,11 @@ class Challenges(db.Model):
     type = db.Column(db.String(80))
     state = db.Column(db.String(80), nullable=False, default="visible")
     logic = db.Column(db.String(80), nullable=False, default="any")
+    initial = db.Column(db.Integer, nullable=True)
+    minimum = db.Column(db.Integer, nullable=True)
+    decay = db.Column(db.Integer, nullable=True)
+    function = db.Column(db.String(32), default="static")
+
     requirements = db.Column(db.JSON)
 
     files = db.relationship("ChallengeFiles", backref="challenge")
@@ -130,6 +135,7 @@ class Challenges(db.Model):
     comments = db.relationship("ChallengeComments", backref="challenge")
     topics = db.relationship("ChallengeTopics", backref="challenge")
     solution = db.relationship("Solutions", backref="challenge", uselist=False)
+    ratings = db.relationship("Ratings", backref="challenge")
 
     class alt_defaultdict(defaultdict):
         """
@@ -998,6 +1004,7 @@ class Tracking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(32))
     ip = db.Column(db.String(46))
+    target = db.Column(db.Integer, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"))
     date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
@@ -1157,3 +1164,28 @@ class Brackets(db.Model):
     name = db.Column(db.String(255))
     description = db.Column(db.Text)
     type = db.Column(db.String(80))
+
+
+class Ratings(db.Model):
+    __tablename__ = "ratings"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"))
+    challenge_id = db.Column(
+        db.Integer, db.ForeignKey("challenges.id", ondelete="CASCADE")
+    )
+    value = db.Column(db.Integer)
+    review = db.Column(db.String(2000), nullable=True)
+    date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    user = db.relationship("Users", foreign_keys="Ratings.user_id", lazy="select")
+
+    # Ensure one rating per user per challenge
+    __table_args__ = (db.UniqueConstraint("user_id", "challenge_id"),)
+
+    def __init__(self, *args, **kwargs):
+        super(Ratings, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return "<Rating user_id={} challenge_id={} value={}>".format(
+            self.user_id, self.challenge_id, self.value
+        )
